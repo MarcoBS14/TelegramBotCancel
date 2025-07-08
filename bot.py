@@ -20,8 +20,12 @@ from telegram.ext import (
 load_dotenv()
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 MAKE_WEBHOOK_URL = os.getenv("MAKE_WEBHOOK_URL")
+ADMIN_CHAT_ID = int(os.getenv("ADMIN_CHAT_ID"))
 
-# Menú principal en formato inline
+# Diccionario para registrar que el usuario quiere contactar admin
+dynamic_state = {}
+
+# Menú principal inline
 def get_main_menu():
     keyboard = [
         [
@@ -29,18 +33,18 @@ def get_main_menu():
             InlineKeyboardButton("💳 Consultar pagos", callback_data="pagos"),
         ],
         [
-            InlineKeyboardButton("❓ Preguntas frecuentes", callback_data="faq")
+            InlineKeyboardButton("📩 Contactar administrador", callback_data="contactar_admin")
         ]
     ]
     return InlineKeyboardMarkup(keyboard)
 
-# Botón de regreso al menú
+# Botón para volver
 def get_return_button():
     return InlineKeyboardMarkup([
         [InlineKeyboardButton("🔙 Volver al menú", callback_data="volver_menu")]
     ])
 
-# Mostrar el menú principal
+# Mostrar menú principal
 async def mostrar_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     reply_markup = get_main_menu()
     if update.message:
@@ -48,13 +52,31 @@ async def mostrar_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif update.callback_query:
         await update.callback_query.message.reply_text("👋 ¿Cómo podemos ayudarte hoy?", reply_markup=reply_markup)
 
-# Comando /start
+# /start
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await mostrar_menu(update, context)
 
-# Manejo de texto general (para que el menú siempre reaparezca)
+# Manejo de texto (respuesta al contacto)
 async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await mostrar_menu(update, context)
+    user_id = update.effective_user.id
+    text = update.message.text.strip()
+    nombre = update.effective_user.full_name or "Sin nombre"
+    username = update.effective_user.username or "Sin username"
+
+    if user_id in dynamic_state:
+        motivo = dynamic_state.pop(user_id)
+        mensaje = (
+            f"📬 *Nuevo contacto de usuario*\n"
+            f"👤 *Nombre:* {nombre}\n"
+            f"🆔 *ID de Telegram:* {user_id}\n"
+            f"🔗 *Usuario:* @{username}\n"
+            f"📌 *Motivo:* {motivo}\n"
+            f"✉️ *Mensaje:* {text}"
+        )
+        await context.bot.send_message(chat_id=ADMIN_CHAT_ID, text=mensaje, parse_mode="Markdown")
+        await update.message.reply_text("Gracias, el administrador te responderá pronto.")
+    else:
+        await mostrar_menu(update, context)
 
 # Manejo de botones
 async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -93,20 +115,14 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif query.data == "pagos":
         await query.edit_message_text("💳 Puedes consultar tus pagos en tu panel personal o contactando a soporte.", reply_markup=get_return_button())
 
-    elif query.data == "faq":
-        await query.edit_message_text(
-            "❓ *Preguntas frecuentes:*\n"
-            "1️⃣ ¿Qué incluye mi suscripción?\n"
-            "2️⃣ ¿Cómo contacto soporte?\n"
-            "3️⃣ ¿Puedo cambiar de plan?",
-            parse_mode="Markdown",
-            reply_markup=get_return_button()
-        )
+    elif query.data == "contactar_admin":
+        dynamic_state[user_id] = "Contacto por suscripción"
+        await query.edit_message_text("✍️ Por favor, escribe tu mensaje y un administrador se pondrá en contacto contigo.")
 
     elif query.data == "volver_menu":
         await mostrar_menu(update, context)
 
-# Configuración del bot
+# Ejecutar bot
 if __name__ == '__main__':
     print("🚀 Bot de cancelación corriendo...")
     app = ApplicationBuilder().token(TELEGRAM_TOKEN).build()
