@@ -1,1 +1,1 @@
-worker: python3 cancel_bot.py
+web: python cancel_bot.py
