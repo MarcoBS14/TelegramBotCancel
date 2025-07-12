@@ -14,71 +14,93 @@ from telegram.ext import (
 # Cargar variables de entorno
 load_dotenv()
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
-ADMIN_USERNAME = os.getenv("ADMIN_USERNAME", "MarcoBS14")  # Username por defecto si no está definido
+MAKE_WEBHOOK_URL = os.getenv("MAKE_WEBHOOK_URL")
+MAKE_API_KEY = os.getenv("MAKE_API_KEY")
 
-# Función para mostrar el menú principal
-async def mostrar_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
+# Menú principal
+def generar_menu():
     keyboard = [
         [
             InlineKeyboardButton("❌ Cancelar suscripción", callback_data="cancelar"),
             InlineKeyboardButton("💳 Consultar pagos", callback_data="pagos"),
         ],
         [
-            InlineKeyboardButton("📞 Contactar administrador", callback_data="contacto")
+            InlineKeyboardButton("💬 Contactar soporte", url="https://t.me/MarcoBS14")
         ]
     ]
-    reply_markup = InlineKeyboardMarkup(keyboard)
+    return InlineKeyboardMarkup(keyboard)
 
-    mensaje = "👋 ¿Cómo puedo ayudarte hoy?"
-
+# Mostrar menú (para comandos y respuestas)
+async def mostrar_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.message:
-        await update.message.reply_text(mensaje, reply_markup=reply_markup)
+        await update.message.reply_text("👋 ¿Cómo puedo ayudarte hoy?", reply_markup=generar_menu())
     elif update.callback_query:
-        await update.callback_query.message.reply_text(mensaje, reply_markup=reply_markup)
+        await update.callback_query.message.reply_text("👋 ¿Cómo puedo ayudarte hoy?", reply_markup=generar_menu())
 
 # Comando /start
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await mostrar_menu(update, context)
 
-# Manejador para cualquier texto
+# Manejador de mensajes de texto
 async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await mostrar_menu(update, context)
 
-# Manejador de botones
+# Manejo de botones
 async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
 
+    user_id = query.from_user.id
+    first_name = query.from_user.first_name or "Sin nombre"
+    username = query.from_user.username or "Sin username"
+
     if query.data == "cancelar":
-        texto = (
-            "<b>🧾 Cómo cancelar tu suscripción</b>\n\n"
+        # Mostrar instrucciones para cancelar en Stripe
+        instrucciones = (
+            "<b>Cómo cancelar tu suscripción</b>\n\n"
             "🔗 Haz clic en este enlace para acceder al portal de suscripciones:\n"
-            "<a href='https://billing.stripe.com/p/login/fZufZib801o65dh61P4F200'>Abrir portal de Stripe</a>\n\n"
-            "📧 Inicia sesión con el correo electrónico que usaste al suscribirte.\n"
+            "https://billing.stripe.com/p/login/fZufZib801o65dh61P4F200\n\n"
+            "📧 Inicia sesión con el correo electrónico que usaste al suscribirte.\n\n"
             "⚙️ Una vez dentro, ve a la sección “Suscripciones” y selecciona “Cancelar suscripción”.\n\n"
             "⚠️ <b>IMPORTANTE</b>\n"
-            "Al confirmar la cancelación, perderás <b>inmediatamente</b> el acceso al grupo.\n"
-            "No realizamos reembolsos totales ni parciales, incluso si no ha finalizado el mes en curso."
+            "Al confirmar la cancelación, perderás inmediatamente el acceso al grupo.\n\n"
+            "Según nuestros Términos y Condiciones, no realizamos reembolsos totales ni parciales, "
+            "incluso si no ha finalizado el mes en curso."
         )
-        await query.edit_message_text(text=texto, parse_mode="HTML")
+
+        await query.edit_message_text(instrucciones, parse_mode="HTML")
+
+        # Enviar datos a Make (opcional para registrar intención de cancelación)
+        data = {
+            "telegram_id": user_id,
+            "nombre": first_name,
+            "username": username
+        }
+        headers = {
+            "x-make-apikey": MAKE_API_KEY
+        }
+        try:
+            response = requests.post(MAKE_WEBHOOK_URL, json=data, headers=headers)
+            if response.status_code == 200:
+                print("✅ Cancelación registrada.")
+            else:
+                print(f"❌ Error {response.status_code} - {response.text}")
+        except Exception as e:
+            print("❌ Excepción", e)
 
     elif query.data == "pagos":
-        await query.edit_message_text("💰 Puedes consultar tus pagos en tu panel personal o escribiéndonos por soporte.")
-
-    elif query.data == "contacto":
-        texto = (
-            "📞 Puedes contactar directamente al administrador dando clic aquí:\n\n"
-            f"<a href='https://t.me/{ADMIN_USERNAME}'>@{ADMIN_USERNAME}</a>"
+        await query.edit_message_text(
+            "💰 Puedes consultar tus pagos iniciando sesión en el portal de Stripe:\n"
+            "https://billing.stripe.com/p/login/fZufZib801o65dh61P4F200"
         )
-        await query.edit_message_text(text=texto, parse_mode="HTML")
 
-# Configuración del bot
+# Configuración y ejecución del bot
 if __name__ == '__main__':
+    print("🤖 Bot de cancelación corriendo...")
     app = ApplicationBuilder().token(TELEGRAM_TOKEN).build()
 
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CallbackQueryHandler(button))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text))
 
-    print("🤖 Bot de cancelación corriendo...")
     app.run_polling()
