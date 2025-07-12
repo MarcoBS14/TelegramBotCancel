@@ -1,5 +1,4 @@
 import os
-import stripe
 import requests
 from dotenv import load_dotenv
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
@@ -15,8 +14,7 @@ from telegram.ext import (
 # Cargar variables de entorno
 load_dotenv()
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
-MAKE_WEBHOOK_URL = os.getenv("MAKE_WEBHOOK_URL")
-MAKE_API_KEY = os.getenv("MAKE_API_KEY")  # Asegúrate de tener esta variable en tu .env
+ADMIN_USERNAME = os.getenv("ADMIN_USERNAME", "MarcoBS14")  # Username por defecto si no está definido
 
 # Función para mostrar el menú principal
 async def mostrar_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -31,10 +29,12 @@ async def mostrar_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
 
+    mensaje = "👋 ¿Cómo puedo ayudarte hoy?"
+
     if update.message:
-        await update.message.reply_text("Hola, ¿cómo podemos ayudarte?", reply_markup=reply_markup)
+        await update.message.reply_text(mensaje, reply_markup=reply_markup)
     elif update.callback_query:
-        await update.callback_query.message.reply_text("Hola, ¿cómo podemos ayudarte?", reply_markup=reply_markup)
+        await update.callback_query.message.reply_text(mensaje, reply_markup=reply_markup)
 
 # Comando /start
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -48,56 +48,29 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
-    user_id = query.from_user.id
-    first_name = query.from_user.first_name or "Sin nombre"
-    username = query.from_user.username or "Sin username"
 
     if query.data == "cancelar":
-        keyboard = [
-            [
-                InlineKeyboardButton("✅ Sí", callback_data="confirmar_cancelacion"),
-                InlineKeyboardButton("❌ No", callback_data="no_cancelar")
-            ]
-        ]
-        reply_markup = InlineKeyboardMarkup(keyboard)
-        await query.edit_message_text(
-            text=(
-                "⚠️ Al cancelar tu suscripción, perderás el acceso al canal premium al final de tu ciclo actual.\n\n"
-                "¿Estás seguro que deseas cancelar tu suscripción?"
-            ),
-            reply_markup=reply_markup
+        texto = (
+            "<b>🧾 Cómo cancelar tu suscripción</b>\n\n"
+            "🔗 Haz clic en este enlace para acceder al portal de suscripciones:\n"
+            "<a href='https://billing.stripe.com/p/login/fZufZib801o65dh61P4F200'>Abrir portal de Stripe</a>\n\n"
+            "📧 Inicia sesión con el correo electrónico que usaste al suscribirte.\n"
+            "⚙️ Una vez dentro, ve a la sección “Suscripciones” y selecciona “Cancelar suscripción”.\n\n"
+            "⚠️ <b>IMPORTANTE</b>\n"
+            "Al confirmar la cancelación, perderás <b>inmediatamente</b> el acceso al grupo.\n"
+            "No realizamos reembolsos totales ni parciales, incluso si no ha finalizado el mes en curso."
         )
-
-    elif query.data == "confirmar_cancelacion":
-        await query.edit_message_text("✅ Se ha registrado tu solicitud de cancelación.")
-        data = {
-            "telegram_id": user_id,
-            "nombre": first_name,
-            "username": username
-        }
-        headers = {
-            "x-make-apikey": MAKE_API_KEY
-        }
-        try:
-            response = requests.post(MAKE_WEBHOOK_URL, json=data, headers=headers)
-            if response.status_code == 200:
-                print("✅ Enviado a Make correctamente")
-            else:
-                print(f"❌ Error al enviar a Make: {response.status_code} - {response.text}")
-        except Exception as e:
-            print("❌ Excepción al enviar a Make:", e)
-
-    elif query.data == "no_cancelar":
-        await query.edit_message_text("❌ Cancelación anulada. Tu suscripción sigue activa.")
+        await query.edit_message_text(text=texto, parse_mode="HTML")
 
     elif query.data == "pagos":
-        await query.edit_message_text("💰 Puedes consultar tus pagos en tu panel personal o escribiendo 'pagos'.")
+        await query.edit_message_text("💰 Puedes consultar tus pagos en tu panel personal o escribiéndonos por soporte.")
 
     elif query.data == "contacto":
-        await query.edit_message_text(
-            "📞 Puedes contactar al administrador respondiendo este mensaje. "
-            "Un miembro del equipo te responderá pronto."
+        texto = (
+            "📞 Puedes contactar directamente al administrador dando clic aquí:\n\n"
+            f"<a href='https://t.me/{ADMIN_USERNAME}'>@{ADMIN_USERNAME}</a>"
         )
+        await query.edit_message_text(text=texto, parse_mode="HTML")
 
 # Configuración del bot
 if __name__ == '__main__':
