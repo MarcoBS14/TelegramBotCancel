@@ -17,20 +17,16 @@ TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 MAKE_WEBHOOK_URL = os.getenv("MAKE_WEBHOOK_URL")
 MAKE_API_KEY = os.getenv("MAKE_API_KEY")
 
-# Menú principal
+# Menú principal (VERTICAL)
 def generar_menu():
     keyboard = [
-        [
-            InlineKeyboardButton("❌ Cancelar suscripción", callback_data="cancelar"),
-            InlineKeyboardButton("💳 Consultar pagos", callback_data="pagos"),
-        ],
-        [
-            InlineKeyboardButton("💬 Contactar soporte", url="https://t.me/MarcoBS14")
-        ]
+        [InlineKeyboardButton("❌ Cancelar suscripción", callback_data="cancelar")],
+        [InlineKeyboardButton("💳 Consultar pagos", callback_data="pagos")],
+        [InlineKeyboardButton("💬 Contactar soporte", url="https://t.me/MarcoBS14")]
     ]
     return InlineKeyboardMarkup(keyboard)
 
-# Mostrar menú (para comandos y respuestas)
+# Mostrar menú
 async def mostrar_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.message:
         await update.message.reply_text("👋 ¿Cómo puedo ayudarte hoy?", reply_markup=generar_menu())
@@ -55,7 +51,6 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
     username = query.from_user.username or "Sin username"
 
     if query.data == "cancelar":
-        # Mostrar instrucciones para cancelar en Stripe
         instrucciones = (
             "<b>Cómo cancelar tu suscripción</b>\n\n"
             "🔗 Haz clic en este enlace para acceder al portal de suscripciones:\n"
@@ -67,10 +62,8 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "Según nuestros Términos y Condiciones, no realizamos reembolsos totales ni parciales, "
             "incluso si no ha finalizado el mes en curso."
         )
-
         await query.edit_message_text(instrucciones, parse_mode="HTML")
 
-        # Enviar datos a Make (opcional para registrar intención de cancelación)
         data = {
             "telegram_id": user_id,
             "nombre": first_name,
@@ -82,11 +75,11 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
         try:
             response = requests.post(MAKE_WEBHOOK_URL, json=data, headers=headers)
             if response.status_code == 200:
-                print("✅ Cancelación registrada.")
+                print("✅ Cancelación registrada en Make.")
             else:
-                print(f"❌ Error {response.status_code} - {response.text}")
+                print(f"❌ Error al enviar a Make: {response.status_code} - {response.text}")
         except Exception as e:
-            print("❌ Excepción", e)
+            print("❌ Excepción al enviar a Make:", e)
 
     elif query.data == "pagos":
         await query.edit_message_text(
@@ -94,7 +87,7 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "https://billing.stripe.com/p/login/fZufZib801o65dh61P4F200"
         )
 
-# Configuración y ejecución del bot
+# Configuración del bot
 if __name__ == '__main__':
     print("🤖 Bot de cancelación corriendo...")
     app = ApplicationBuilder().token(TELEGRAM_TOKEN).build()
