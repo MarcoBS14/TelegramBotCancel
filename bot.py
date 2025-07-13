@@ -52,15 +52,18 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if query.data == "cancelar":
         instrucciones = (
-            "<b>Cómo cancelar tu suscripción</b>\n\n"
-            "🔗 Haz clic en este enlace para acceder al portal de suscripciones:\n"
-            "https://billing.stripe.com/p/login/fZufZib801o65dh61P4F200\n\n"
-            "📧 Inicia sesión con el correo electrónico que usaste al suscribirte.\n\n"
-            "⚙️ Una vez dentro, ve a la sección “Suscripciones” y selecciona “Cancelar suscripción”.\n\n"
+            "Hola! Lamentamos mucho que hayas decidido cancelar tu suscripción y agradecemos el tiempo que formaste parte de nuestro grupo.\n\n"
+            "A continuación te explicamos cómo hacerlo paso a paso:\n"
+            "⸻\n\n"
+            "<b>Cómo cancelar tu suscripción</b>\n"
+            "1. 🔗 Haz clic en este enlace para acceder al portal de suscripciones:\n"
+            "https://billing.stripe.com/p/login/fZufZib801o65dh61P4F200\n"
+            "2. 📧 Inicia sesión con el correo electrónico que usaste al suscribirte.\n"
+            "3. ⚙️ Una vez dentro, ve a la sección “Suscripciones” y selecciona “Cancelar suscripción”.\n\n"
+            "⸻\n"
             "⚠️ <b>IMPORTANTE</b>\n"
-            "Al confirmar la cancelación, perderás inmediatamente el acceso al grupo.\n\n"
-            "Según nuestros Términos y Condiciones, no realizamos reembolsos totales ni parciales, "
-            "incluso si no ha finalizado el mes en curso."
+            "•⁠  Tu mes vigente o ya pagado continuará activo hasta su fecha de vencimiento; al término de este periodo, perderás el acceso y serás retirado del grupo.\n"
+            "•⁠  Según nuestros Términos y Condiciones, no realizamos reembolsos totales ni parciales, incluso si no ha finalizado el mes en curso."
         )
         await query.edit_message_text(instrucciones, parse_mode="HTML")
 
