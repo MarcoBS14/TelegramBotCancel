@@ -22,7 +22,7 @@ def generar_menu():
     keyboard = [
         [InlineKeyboardButton("❌ Cancelar suscripción", callback_data="cancelar")],
         [InlineKeyboardButton("💳 Consultar pagos", callback_data="pagos")],
-        [InlineKeyboardButton("💬 Contactar soporte", url="https://t.me/MarcoBS14")]
+        [InlineKeyboardButton("💬 Contactar soporte", url="https://t.me/mmsportplays")]
     ]
     return InlineKeyboardMarkup(keyboard)
 
